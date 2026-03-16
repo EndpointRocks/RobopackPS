@@ -2,8 +2,7 @@
 
 Robopack is a platform for packaging, deploying, and keeping third-party applications up to date in Microsoft Intune. Learn more at https://robopack.com.
 
-RobopackPS is a PowerShell module for automating software packaging, deployment flows, and operational tasks in Robopack and Microsoft Intune.
-It works well for both standard catalog apps and custom apps, and it makes it easy to retrieve operational and package data from Robopack.
+RobopackPS is a PowerShell module for interacting with the Robopack Web API, enabling automation of packaging instant apps, custom apps, Robopatch flows, Radar insights, and other operational tasks in Robopack—and thereby Microsoft Intune.
 
 ## Project Links
 

@@ -4,7 +4,7 @@
     GUID              = 'cf21d18c-69a8-4b91-a7df-78f6fab88466'
     Author            = 'Tobias Sandberg'
     CompanyName       = 'Endpoint.Rocks'
-    Description       = 'PowerShell module for automating software packaging, deployment flows, and operational tasks in Robopack and Microsoft Intune.'
+    Description       = 'RobopackPS is a PowerShell module for interacting with the Robopack Web API, enabling automation of packaging instant apps, custom apps, Robopatch flows, Radar insights, and other operational tasks in Robopack—and thereby Microsoft Intune.'
     CompatiblePSEditions = @('Desktop', 'Core')
     PowerShellVersion = '5.1'
     Copyright         = '(c) 2026 Endpoint.Rocks. All rights reserved.'

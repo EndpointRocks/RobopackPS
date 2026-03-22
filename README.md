@@ -2,7 +2,8 @@
 
 Robopack is a platform for packaging, deploying, and keeping third-party applications up to date in Microsoft Intune. Learn more at https://robopack.com.
 
-RobopackPS is a PowerShell module for interacting with the Robopack Web API, enabling automation of packaging instant apps, custom apps, Robopatch flows, Radar insights, and other operational tasks in Robopack—and thereby Microsoft Intune.
+RobopackPS is a PowerShell module for automating software packaging, deployment flows, and operational tasks in Robopack and Microsoft Intune.
+It works well for both standard catalog apps and custom apps, and it makes it easy to retrieve operational and package data from Robopack.
 
 ## Project Links
 
@@ -12,7 +13,7 @@ RobopackPS is a PowerShell module for interacting with the Robopack Web API, ena
 ## Status
 
 - Public source repository is available now.
-- PowerShell Gallery publishing is planned but not live yet.
+- Module is live on PowerShell Gallery: https://www.powershellgallery.com/packages/RobopackPS
 
 ## What You Can Do
 
@@ -31,14 +32,38 @@ RobopackPS is a PowerShell module for interacting with the Robopack Web API, ena
 
 ## Installation
 
-From the module root folder (`RobopackPS`), import the module from source:
+Install from PowerShell Gallery:
+
+```powershell
+Install-Module -Name RobopackPS -Repository PSGallery -Scope CurrentUser
+```
+
+If you have not trusted PSGallery yet:
+
+```powershell
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+Install-Module -Name RobopackPS -Repository PSGallery -Scope CurrentUser
+```
+
+Import module after install:
+
+```powershell
+Import-Module RobopackPS -Force
+```
+
+Update to latest version:
+
+```powershell
+Update-Module -Name RobopackPS
+```
+
+Alternative for development from source (module root `RobopackPS`):
 
 ```powershell
 Import-Module .\RobopackPS.psd1 -Force
 ```
 
 This repository is the public source for the module.
-When the module is published to PowerShell Gallery, this README will be updated with `Install-Module` instructions.
 
 ## Authentication
 

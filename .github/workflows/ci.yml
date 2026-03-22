@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'RobopackPS/**'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'RobopackPS/**'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  test:
+    name: Test Module
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate module manifest
+        shell: pwsh
+        run: |
+          $manifest = Test-ModuleManifest -Path .\RobopackPS\RobopackPS.psd1 -ErrorAction Stop
+          Write-Host "Module   : $($manifest.Name)"
+          Write-Host "Version  : $($manifest.Version)"
+          Write-Host "Author   : $($manifest.Author)"
+
+      - name: Import module
+        shell: pwsh
+        run: |
+          Import-Module .\RobopackPS\RobopackPS.psd1 -Force -ErrorAction Stop
+          $cmds = Get-Command -Module RobopackPS
+          Write-Host "Exported commands: $($cmds.Count)"
+          $cmds | ForEach-Object { Write-Host "  - $($_.Name)" }
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          if (-not (Get-Module -ListAvailable -Name Pester | Where-Object Version -ge '5.0')) {
+            Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+          }
+          if (Test-Path .\tests) {
+            $config = New-PesterConfiguration
+            $config.Run.Path = '.\tests'
+            $config.Output.Verbosity = 'Detailed'
+            $config.TestResult.Enabled = $true
+            $config.TestResult.OutputPath = 'test-results.xml'
+            $result = Invoke-Pester -Configuration $config
+            if ($result.FailedCount -gt 0) {
+              throw "$($result.FailedCount) test(s) failed."
+            }
+          } else {
+            Write-Host "No tests folder found – skipping Pester."
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.xml
+          if-no-files-found: ignore

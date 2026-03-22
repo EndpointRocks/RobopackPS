@@ -23,6 +23,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve module manifest
+        id: module
+        shell: pwsh
+        run: |
+          $manifestFile = Get-ChildItem -Path . -Recurse -File -Filter '*.psd1' |
+            Where-Object { $_.FullName -notmatch '[\\/]\.github[\\/]' } |
+            Select-Object -First 1
+          if (-not $manifestFile) {
+            throw 'No module manifest (.psd1) found in repository.'
+          }
+
+          $manifestPath = (Resolve-Path -LiteralPath $manifestFile.FullName).Path
+          $moduleDir = Split-Path -Parent $manifestPath
+          $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
+
+          Write-Host "Found manifest: $manifestPath"
+          Write-Host "Module name   : $($manifest.Name)"
+
+          "manifest_path=$manifestPath" >> $env:GITHUB_OUTPUT
+          "module_dir=$moduleDir" >> $env:GITHUB_OUTPUT
+          "module_name=$($manifest.Name)" >> $env:GITHUB_OUTPUT
+
       # ── Resolve version ─────────────────────────────────────────────────────
       - name: Resolve version from tag or input
         id: version
@@ -57,7 +79,7 @@ jobs:
         shell: pwsh
         run: |
           $ver  = '${{ steps.version.outputs.ver }}'
-          $path = '.\RobopackPS\RobopackPS.psd1'
+          $path = '${{ steps.module.outputs.manifest_path }}'
           $content = Get-Content $path -Raw
           $content = $content -replace "ModuleVersion\s*=\s*'[\d\.]+'" , "ModuleVersion     = '$ver'"
           Set-Content $path $content -NoNewline
@@ -67,14 +89,14 @@ jobs:
       - name: Validate module manifest
         shell: pwsh
         run: |
-          $m = Test-ModuleManifest -Path .\RobopackPS\RobopackPS.psd1 -ErrorAction Stop
+          $m = Test-ModuleManifest -Path '${{ steps.module.outputs.manifest_path }}' -ErrorAction Stop
           Write-Host "Module: $($m.Name)  Version: $($m.Version)"
 
       - name: Import module (smoke test)
         shell: pwsh
         run: |
-          Import-Module .\RobopackPS\RobopackPS.psd1 -Force -ErrorAction Stop
-          $cmds = Get-Command -Module RobopackPS
+          Import-Module '${{ steps.module.outputs.manifest_path }}' -Force -ErrorAction Stop
+          $cmds = Get-Command -Module '${{ steps.module.outputs.module_name }}'
           Write-Host "Exported commands: $($cmds.Count)"
 
       # ── Run tests ────────────────────────────────────────────────────────────
@@ -103,29 +125,31 @@ jobs:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
         run: |
           $ver = '${{ steps.version.outputs.ver }}'
+          $moduleName = '${{ steps.module.outputs.module_name }}'
+          $modulePath = '${{ steps.module.outputs.module_dir }}'
 
           # Guard: check if this version already exists
-          $existing = Find-Module -Name RobopackPS -RequiredVersion $ver -ErrorAction SilentlyContinue
+          $existing = Find-Module -Name $moduleName -RequiredVersion $ver -ErrorAction SilentlyContinue
           if ($existing) {
             throw "Version $ver already exists in PSGallery. Bump the version before publishing."
           }
 
           Publish-Module `
-            -Path         .\RobopackPS `
+            -Path         $modulePath `
             -NuGetApiKey  $env:PSGALLERY_API_KEY `
             -Repository   PSGallery `
             -Verbose
 
-          Write-Host "Published RobopackPS $ver"
-          Write-Host "https://www.powershellgallery.com/packages/RobopackPS/$ver"
+          Write-Host "Published $moduleName $ver"
+          Write-Host "https://www.powershellgallery.com/packages/$moduleName/$ver"
 
       # ── GitHub release ─────────────────────────────────────────────────────
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
-          name: RobopackPS v${{ steps.version.outputs.ver }}
+          name: ${{ steps.module.outputs.module_name }} v${{ steps.version.outputs.ver }}
           generate_release_notes: true
           body: |
             Published to PowerShell Gallery:
-            https://www.powershellgallery.com/packages/RobopackPS/${{ steps.version.outputs.ver }}
+            https://www.powershellgallery.com/packages/${{ steps.module.outputs.module_name }}/${{ steps.version.outputs.ver }}

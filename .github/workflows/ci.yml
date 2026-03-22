@@ -23,10 +23,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve module manifest
+        id: module
+        shell: pwsh
+        run: |
+          $manifestFile = Get-ChildItem -Path . -Recurse -File -Filter '*.psd1' |
+            Where-Object { $_.FullName -notmatch '[\\/]\.github[\\/]' } |
+            Select-Object -First 1
+          if (-not $manifestFile) {
+            throw 'No module manifest (.psd1) found in repository.'
+          }
+
+          $manifestPath = (Resolve-Path -LiteralPath $manifestFile.FullName).Path
+          $moduleDir = Split-Path -Parent $manifestPath
+          $manifest = Test-ModuleManifest -Path $manifestPath -ErrorAction Stop
+
+          Write-Host "Found manifest: $manifestPath"
+          Write-Host "Module name   : $($manifest.Name)"
+
+          "manifest_path=$manifestPath" >> $env:GITHUB_OUTPUT
+          "module_dir=$moduleDir" >> $env:GITHUB_OUTPUT
+          "module_name=$($manifest.Name)" >> $env:GITHUB_OUTPUT
+
       - name: Validate module manifest
         shell: pwsh
         run: |
-          $manifest = Test-ModuleManifest -Path .\RobopackPS\RobopackPS.psd1 -ErrorAction Stop
+          $manifest = Test-ModuleManifest -Path '${{ steps.module.outputs.manifest_path }}' -ErrorAction Stop
           Write-Host "Module   : $($manifest.Name)"
           Write-Host "Version  : $($manifest.Version)"
           Write-Host "Author   : $($manifest.Author)"
@@ -34,8 +56,8 @@ jobs:
       - name: Import module
         shell: pwsh
         run: |
-          Import-Module .\RobopackPS\RobopackPS.psd1 -Force -ErrorAction Stop
-          $cmds = Get-Command -Module RobopackPS
+          Import-Module '${{ steps.module.outputs.manifest_path }}' -Force -ErrorAction Stop
+          $cmds = Get-Command -Module '${{ steps.module.outputs.module_name }}'
           Write-Host "Exported commands: $($cmds.Count)"
           $cmds | ForEach-Object { Write-Host "  - $($_.Name)" }
 
